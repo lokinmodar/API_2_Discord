@@ -37,8 +37,8 @@ public class ApiData implements Serializable, Parcelable {
     private final static long serialVersionUID = -7157917222153211410L;
 
     protected ApiData(Parcel in) {
-        this.target = ((Object) in.readValue((Object.class.getClassLoader())));
-        this.html = ((Object) in.readValue((Object.class.getClassLoader())));
+        this.target = in.readValue((Object.class.getClassLoader()));
+        this.html = in.readValue((Object.class.getClassLoader()));
         in.readList(this.data, (br.com.theoldpinkeye.api2discord.data.Datum.class.getClassLoader()));
     }
 

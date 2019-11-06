@@ -1,10 +1,12 @@
 package br.com.theoldpinkeye.api2discord;
 
+import android.icu.util.Calendar;
 import android.os.Bundle;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
 
+import android.util.Log;
 import android.view.View;
 
 import androidx.navigation.NavController;
@@ -21,9 +23,28 @@ import androidx.appcompat.widget.Toolbar;
 
 import android.view.Menu;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import br.com.theoldpinkeye.api2discord.data.ApiData;
+import br.com.theoldpinkeye.api2discord.data.ApiFetch;
+import br.com.theoldpinkeye.api2discord.data.Datum;
+import br.com.theoldpinkeye.api2discord.data.NetworkClient;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+
 public class MainActivity extends AppCompatActivity {
 
     private AppBarConfiguration mAppBarConfiguration;
+    private static final DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+    public List<Datum> dados = new ArrayList<>();
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,6 +72,8 @@ public class MainActivity extends AppCompatActivity {
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment);
         NavigationUI.setupActionBarWithNavController(this, navController, mAppBarConfiguration);
         NavigationUI.setupWithNavController(navigationView, navController);
+
+        fetchApiData();
     }
 
     @Override
@@ -65,5 +88,62 @@ public class MainActivity extends AppCompatActivity {
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment);
         return NavigationUI.navigateUp(navController, mAppBarConfiguration)
                 || super.onSupportNavigateUp();
+    }
+
+
+    private void fetchApiData() {
+        //Obtain an instance of Retrofit by calling the static method.
+        Retrofit retrofit = NetworkClient.getRetrofitClient();
+        /*
+        The main purpose of Retrofit is to create HTTP calls from the Java interface based on the annotation associated with each method. This is achieved by just passing the interface class as parameter to the create method
+        */
+        ApiFetch dataFetchAPIs = retrofit.create(ApiFetch.class);
+        /*
+        Invoke the method corresponding to the HTTP request which will return a Call object. This Call object will used to send the actual network request with the specified parameters
+        */
+        Date dataAtual = new Date();
+        Log.d("Hoje: ", dateFormat.format(dataAtual));
+
+        Calendar c = Calendar.getInstance();
+        c.setTime(dataAtual);
+        c.add(Calendar.DATE, -1);
+
+        Date hojeMenosUm = c.getTime();
+
+        Log.d("Hoje menos um", hojeMenosUm.toString());
+
+
+        Call call = dataFetchAPIs.getDrops(dateFormat.format(hojeMenosUm), "drop");
+        /*
+        This is the line which actually sends a network request. Calling enqueue() executes a call asynchronously. It has two callback listeners which will invoked on the main thread
+        */
+        call.enqueue(new Callback() {
+            @Override
+            public void onResponse(Call call, Response response) {
+                /*This is the success callback. Though the response type is JSON, with Retrofit we get the response in the form of WResponse POJO class
+                 */
+                if (response.body() != null) {
+                    ApiData apiResponse = (ApiData) response.body();
+
+                        Log.i("dado", apiResponse.toString());
+                        dados.addAll(apiResponse.getData());
+                        for (Datum d : dados){
+                            Log.i("Dado:", d.toString());
+                        }
+                }
+
+
+            }
+
+            @Override
+            public void onFailure(Call call, Throwable t) {
+                Log.e("Erro! ", t.toString());
+                /*
+                Error callback
+                */
+            }
+            });
+
+
     }
 }
