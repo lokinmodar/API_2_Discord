@@ -32,6 +32,7 @@ import java.util.List;
 import br.com.theoldpinkeye.api2discord.data.ApiData;
 import br.com.theoldpinkeye.api2discord.data.ApiFetch;
 import br.com.theoldpinkeye.api2discord.data.Datum;
+import br.com.theoldpinkeye.api2discord.data.DropInfo;
 import br.com.theoldpinkeye.api2discord.data.NetworkClient;
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -43,6 +44,7 @@ public class MainActivity extends AppCompatActivity {
     private AppBarConfiguration mAppBarConfiguration;
     private static final DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
     public List<Datum> dados = new ArrayList<>();
+    public List<DropInfo> treatedData = new ArrayList<>();
 
 
 
@@ -91,6 +93,47 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
+    private DropInfo dataParse(Datum drop){
+
+
+        String date = drop.getDate();
+
+        int usernameStart = drop.getDropTxt().indexOf(":")+2;
+        String minusUsername = drop.getDropTxt().substring(usernameStart);//Tira a palavra "Username: "
+        //Log.e("Passo 1", minusUsername);
+
+        int usernameEnd = minusUsername.indexOf(")")+1;
+        String username = minusUsername.substring(0, usernameEnd); //Salva Username
+        String minusUsernameText = minusUsername.substring(usernameEnd+2);//Após extração do nome de Usuário
+        //Log.e("Passo 2", minusUsernameText);
+
+
+        int guildcardNumberStart = minusUsernameText.indexOf(":")+2;
+        String minusGuildcardFieldName = minusUsernameText.substring(guildcardNumberStart);//Tira a palavra "Guildcard Number: "
+        //Log.e("Passo 3", minusGuildcardFieldName);
+
+        int guildcardNumberEnd = minusGuildcardFieldName.indexOf(" ")-1;
+        String guildcard = minusGuildcardFieldName.substring(0, guildcardNumberEnd);//Salva numero do Guilcard
+        String minusUserGuild = minusGuildcardFieldName.substring(guildcardNumberEnd+2);//Após extração do nome de usuário e guildcard
+        //Log.e("Passo 4", minusUserGuild);
+
+        int hexNumberStart = minusUserGuild.indexOf(":")+2;
+        String minusHexFieldName = minusUserGuild.substring(hexNumberStart);//Tira a palavra "Hex: "
+        //Log.e("Passo 5", minusHexFieldName);
+
+        int hexNumberEnd = minusHexFieldName.indexOf(" ")-1;
+        String hex = minusHexFieldName.substring(0, hexNumberEnd);//Salva numero Hex
+        String minusUserGuildHex = minusHexFieldName.substring(hexNumberEnd+2);//Após extração do nome de usuário e guildcard e hex
+        //Log.e("Passo 6", minusUserGuildHex);
+
+        String item = minusUserGuildHex.substring(minusUserGuildHex.indexOf("d")+2);//Salva item obtido
+        //Log.e("Passo 7", item);
+
+
+        return new DropInfo(date, username, guildcard, hex, item);
+    }
+
+
     private void fetchApiData() {
         //Obtain an instance of Retrofit by calling the static method.
         Retrofit retrofit = NetworkClient.getRetrofitClient();
@@ -125,11 +168,18 @@ public class MainActivity extends AppCompatActivity {
                 if (response.body() != null) {
                     ApiData apiResponse = (ApiData) response.body();
 
-                        Log.i("dado", apiResponse.toString());
-                        dados.addAll(apiResponse.getData());
-                        for (Datum d : dados){
-                            Log.i("Dado:", d.toString());
-                        }
+                    //Log.i("dado", apiResponse.toString());
+
+                    dados.addAll(apiResponse.getData());
+                    for (Datum d : dados){
+                        //Log.i("Dado:", d.toString());
+                        treatedData.add(dataParse(d));
+
+                    }
+                    for (DropInfo i : treatedData){
+                        Log.e("Dado tratado:", i.toString());
+                    }
+
                 }
 
 
@@ -142,7 +192,7 @@ public class MainActivity extends AppCompatActivity {
                 Error callback
                 */
             }
-            });
+        });
 
 
     }
