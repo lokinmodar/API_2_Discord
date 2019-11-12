@@ -1,5 +1,6 @@
-package br.com.theoldpinkeye.api2discord.data;
+package br.com.theoldpinkeye.api2discord.remote;
 
+import br.com.theoldpinkeye.api2discord.data.ApiData;
 import retrofit2.Call;
 import retrofit2.http.GET;
 import retrofit2.http.Query;

@@ -2,26 +2,21 @@ package br.com.theoldpinkeye.api2discord;
 
 import android.icu.util.Calendar;
 import android.os.Bundle;
-
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.android.material.snackbar.Snackbar;
-
 import android.util.Log;
+import android.view.Menu;
 import android.view.View;
 
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
 
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationView;
-
-import androidx.drawerlayout.widget.DrawerLayout;
-
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
-
-import android.view.Menu;
+import com.google.android.material.snackbar.Snackbar;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -30,10 +25,14 @@ import java.util.Date;
 import java.util.List;
 
 import br.com.theoldpinkeye.api2discord.data.ApiData;
-import br.com.theoldpinkeye.api2discord.data.ApiFetch;
+import br.com.theoldpinkeye.api2discord.data.Author;
 import br.com.theoldpinkeye.api2discord.data.Datum;
 import br.com.theoldpinkeye.api2discord.data.DropInfo;
-import br.com.theoldpinkeye.api2discord.data.NetworkClient;
+import br.com.theoldpinkeye.api2discord.data.DropJson;
+import br.com.theoldpinkeye.api2discord.data.Embed;
+import br.com.theoldpinkeye.api2discord.remote.ApiFetch;
+import br.com.theoldpinkeye.api2discord.remote.DataPost;
+import br.com.theoldpinkeye.api2discord.remote.NetworkClient;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -45,6 +44,8 @@ public class MainActivity extends AppCompatActivity {
     private static final DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
     public List<Datum> dados = new ArrayList<>();
     public List<DropInfo> treatedData = new ArrayList<>();
+    public String fetchUrl = "http://api.schtserv.com";
+    public String postUrl = "https://discordapp.com/api/webhooks";
 
 
 
@@ -54,12 +55,12 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        FloatingActionButton fab = findViewById(R.id.fab);
+        FloatingActionButton fab = findViewById(R.id.fabSend);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+                Snackbar.make(view, "Enviar Drops", Snackbar.LENGTH_LONG)
+                        .setAction("Enviar", null).show();
             }
         });
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
@@ -102,7 +103,7 @@ public class MainActivity extends AppCompatActivity {
         String minusUsername = drop.getDropTxt().substring(usernameStart);//Tira a palavra "Username: "
         //Log.e("Passo 1", minusUsername);
 
-        int usernameEnd = minusUsername.indexOf(")")+1;
+        int usernameEnd = minusUsername.indexOf("(");
         String username = minusUsername.substring(0, usernameEnd); //Salva Username
         String minusUsernameText = minusUsername.substring(usernameEnd+2);//Após extração do nome de Usuário
         //Log.e("Passo 2", minusUsernameText);
@@ -133,10 +134,36 @@ public class MainActivity extends AppCompatActivity {
         return new DropInfo(date, username, guildcard, hex, item);
     }
 
+    private void postDataToDiscord(DropJson dropJson) {
+        Retrofit retrofitpost = NetworkClient.getRetrofitClient(postUrl);
+
+        DataPost dataPostAPIs = retrofitpost.create(DataPost.class);
+        //TODO: Finalizar processo de envio (call e POST)
+
+        Call call = dataPostAPIs.postDropInfo(dropJson);
+
+
+       call.enqueue(new Callback<DropJson>() {
+            @Override
+            public void onResponse(Call<DropJson> call, Response<DropJson> response) {
+                if (response.isSuccessful()) {
+                    Log.i("Info", response.body().toString());
+                }
+            }
+
+            @Override
+            public void onFailure(Call call, Throwable t) {
+                Log.i("Info", t.toString());
+            }
+        });
+
+    }
+
+    //TODO: Criar processamento dos dados das drops para envio via POST
 
     private void fetchApiData() {
         //Obtain an instance of Retrofit by calling the static method.
-        Retrofit retrofit = NetworkClient.getRetrofitClient();
+        Retrofit retrofit = NetworkClient.getRetrofitClient(fetchUrl);
         /*
         The main purpose of Retrofit is to create HTTP calls from the Java interface based on the annotation associated with each method. This is achieved by just passing the interface class as parameter to the create method
         */
@@ -153,7 +180,7 @@ public class MainActivity extends AppCompatActivity {
 
         Date hojeMenosUm = c.getTime();
 
-        Log.d("Hoje menos um", hojeMenosUm.toString());
+        Log.i("Hoje menos um", hojeMenosUm.toString());
 
 
         Call call = dataFetchAPIs.getDrops(dateFormat.format(hojeMenosUm), "drop");
@@ -178,6 +205,8 @@ public class MainActivity extends AppCompatActivity {
                     }
                     for (DropInfo i : treatedData){
                         Log.e("Dado tratado:", i.toString());
+
+
                     }
 
                 }
@@ -196,4 +225,45 @@ public class MainActivity extends AppCompatActivity {
 
 
     }
+
+
+    private void preparePost(List<DropInfo> drops){
+
+
+        for (DropInfo i : drops){
+
+
+            DropJson drop = new DropJson();
+            drop.setUsername("Teste Dante");
+            drop.setAvatarUrl("https://ih0.redbubble.net/image.417177234.1544/st%2Csmall%2C215x235-pad%2C210x230%2Cf8f8f8.u11.jpg");
+            drop.setContent("New drop");
+
+
+            List<Embed> embeds = new ArrayList<>();
+
+            Author author = new Author();
+            author.setName("Dante");
+            author.setIconUrl("https://schtserv.com/uploads/monthly_2018_07/no_frills_no_glow.png.b597555c892d415e46de692c1adb3faf.png");
+            author.setUrl("http://www.theoldpinkeye.com.br");
+
+            Embed embed = new Embed();
+            embed.setAuthor(author);
+            embed.setColor(16712224);
+            embed.setTimestamp(i.getDate());
+            embed.setDescription("**Character: **" + i.getUsername() + " **Guildcard Number:** " + i.getGuildcard() + " got **" + i.getItem() + "** **Hex:** " + i.getHex());
+            embed.setUrl("https://schtserv.com/");
+
+            embeds.add(embed);
+
+            drop.setEmbeds(embeds);
+
+            Log.i("to send", drop.toString());
+
+
+            postDataToDiscord(drop);
+
+        }
+    }
+
+
 }
