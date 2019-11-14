@@ -17,6 +17,7 @@ import androidx.navigation.ui.NavigationUI;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.snackbar.Snackbar;
+import com.google.gson.Gson;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -33,6 +34,8 @@ import br.com.theoldpinkeye.api2discord.data.Embed;
 import br.com.theoldpinkeye.api2discord.remote.ApiFetch;
 import br.com.theoldpinkeye.api2discord.remote.DataPost;
 import br.com.theoldpinkeye.api2discord.remote.NetworkClient;
+import okhttp3.MediaType;
+import okhttp3.RequestBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -46,6 +49,7 @@ public class MainActivity extends AppCompatActivity {
     public List<DropInfo> treatedData = new ArrayList<>();
     public String fetchUrl = "http://api.schtserv.com";
     public String postUrl = "https://discordapp.com/api/webhooks";
+    public List<DropJson> dropJsonList = new ArrayList<>();
 
 
 
@@ -60,7 +64,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 Snackbar.make(view, "Enviar Drops", Snackbar.LENGTH_LONG)
-                        .setAction("Enviar", null).show();
+                        .setAction("Enviar", new PostToDiscordListener()).show();
             }
         });
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
@@ -77,6 +81,7 @@ public class MainActivity extends AppCompatActivity {
         NavigationUI.setupWithNavController(navigationView, navController);
 
         fetchApiData();
+
     }
 
     @Override
@@ -93,6 +98,17 @@ public class MainActivity extends AppCompatActivity {
                 || super.onSupportNavigateUp();
     }
 
+    public class PostToDiscordListener implements View.OnClickListener {
+
+        @Override
+        public void onClick(View v) {
+
+            // Code to undo the user's last action
+
+            postDataToDiscord(dropJsonList);
+
+        }
+    }
 
     private DropInfo dataParse(Datum drop){
 
@@ -134,28 +150,40 @@ public class MainActivity extends AppCompatActivity {
         return new DropInfo(date, username, guildcard, hex, item);
     }
 
-    private void postDataToDiscord(DropJson dropJson) {
-        Retrofit retrofitpost = NetworkClient.getRetrofitClient(postUrl);
-
-        DataPost dataPostAPIs = retrofitpost.create(DataPost.class);
-        //TODO: Finalizar processo de envio (call e POST)
-
-        Call call = dataPostAPIs.postDropInfo(dropJson);
+    private void postDataToDiscord(List<DropJson> dropJsonL) {
 
 
-       call.enqueue(new Callback<DropJson>() {
-            @Override
-            public void onResponse(Call<DropJson> call, Response<DropJson> response) {
-                if (response.isSuccessful()) {
-                    Log.i("Info", response.body().toString());
+        for (DropJson drop : dropJsonL) {
+
+
+            String dropJS = new Gson().toJson(drop);
+            RequestBody requestBody = RequestBody.create(MediaType.parse("application/json"), dropJS);
+            Log.i("dado a enviar", dropJS);
+
+            Retrofit retrofitpost = NetworkClient.getRetrofitClient(postUrl);
+
+            DataPost dataPostAPIs = retrofitpost.create(DataPost.class);
+            //TODO: Finalizar processo de envio (call e POST)
+
+            Call<RequestBody> call = dataPostAPIs.postDropInfo(requestBody);
+            Log.i("Call",call.toString());
+
+
+            call.enqueue(new Callback<RequestBody>() {
+                @Override
+                public void onResponse(Call<RequestBody> call, Response<RequestBody> response) {
+                    if (response.isSuccessful()){
+                        Log.i("Foi",response.toString());
+                    }
                 }
-            }
 
-            @Override
-            public void onFailure(Call call, Throwable t) {
-                Log.i("Info", t.toString());
-            }
-        });
+                @Override
+                public void onFailure(Call<RequestBody> call, Throwable t) {
+                    Log.e("Erro",t.toString());
+                }
+            });
+
+        }
 
     }
 
@@ -205,6 +233,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                     for (DropInfo i : treatedData){
                         Log.e("Dado tratado:", i.toString());
+                        dropJsonList.add(preparePost(i));
 
 
                     }
@@ -227,42 +256,42 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private void preparePost(List<DropInfo> drops){
+    private DropJson preparePost(DropInfo i){
 
 
-        for (DropInfo i : drops){
+        DropJson drop = new DropJson();
+
+        drop.setUsername("Teste Dante");
+        drop.setAvatarUrl("https://ih0.redbubble.net/image.417177234.1544/st%2Csmall%2C215x235-pad%2C210x230%2Cf8f8f8.u11.jpg");
+        drop.setContent("New drop");
 
 
-            DropJson drop = new DropJson();
-            drop.setUsername("Teste Dante");
-            drop.setAvatarUrl("https://ih0.redbubble.net/image.417177234.1544/st%2Csmall%2C215x235-pad%2C210x230%2Cf8f8f8.u11.jpg");
-            drop.setContent("New drop");
+        List<Embed> embeds = new ArrayList<>();
+
+        Author author = new Author();
+        author.setName("Dante");
+        author.setIconUrl("https://schtserv.com/uploads/monthly_2018_07/no_frills_no_glow.png.b597555c892d415e46de692c1adb3faf.png");
+        author.setUrl("http://www.theoldpinkeye.com.br");
+
+        Embed embed = new Embed();
+        embed.setAuthor(author);
+        embed.setColor(16712224);
+        embed.setTimestamp(i.getDate());
+        embed.setDescription("**Character: **" + i.getUsername() + " **Guildcard Number:** " + i.getGuildcard() + " got **" + i.getItem() + "** **Hex:** " + i.getHex());
+        embed.setUrl("https://schtserv.com/");
+
+        embeds.add(embed);
+
+        drop.setEmbeds(embeds);
+
+        //Log.i("to send", drop.toString());
 
 
-            List<Embed> embeds = new ArrayList<>();
-
-            Author author = new Author();
-            author.setName("Dante");
-            author.setIconUrl("https://schtserv.com/uploads/monthly_2018_07/no_frills_no_glow.png.b597555c892d415e46de692c1adb3faf.png");
-            author.setUrl("http://www.theoldpinkeye.com.br");
-
-            Embed embed = new Embed();
-            embed.setAuthor(author);
-            embed.setColor(16712224);
-            embed.setTimestamp(i.getDate());
-            embed.setDescription("**Character: **" + i.getUsername() + " **Guildcard Number:** " + i.getGuildcard() + " got **" + i.getItem() + "** **Hex:** " + i.getHex());
-            embed.setUrl("https://schtserv.com/");
-
-            embeds.add(embed);
-
-            drop.setEmbeds(embeds);
-
-            Log.i("to send", drop.toString());
 
 
-            postDataToDiscord(drop);
 
-        }
+
+        return drop;
     }
 
 
