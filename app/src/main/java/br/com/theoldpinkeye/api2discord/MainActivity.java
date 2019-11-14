@@ -24,6 +24,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Random;
 
 import br.com.theoldpinkeye.api2discord.data.ApiData;
 import br.com.theoldpinkeye.api2discord.data.Author;
@@ -275,7 +276,14 @@ public class MainActivity extends AppCompatActivity {
 
         Embed embed = new Embed();
         embed.setAuthor(author);
-        embed.setColor(16712224);
+
+        // create random object - reuse this as often as possible
+        Random random = new Random();
+
+        // create a big random number - maximum is ffffff (hex) = 16777215 (dez)
+        int nextInt = random.nextInt(0xffffff + 1);
+
+        embed.setColor(nextInt);
         embed.setTimestamp(i.getDate());
         embed.setDescription("**Character: **" + i.getUsername() + " **Guildcard Number:** " + i.getGuildcard() + " got **" + i.getItem() + "** **Hex:** " + i.getHex());
         embed.setUrl("https://schtserv.com/");
