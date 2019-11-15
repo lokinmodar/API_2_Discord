@@ -2,6 +2,8 @@ package br.com.theoldpinkeye.api2discord;
 
 import android.icu.util.Calendar;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
@@ -17,7 +19,6 @@ import androidx.navigation.ui.NavigationUI;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.snackbar.Snackbar;
-import com.google.gson.Gson;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -35,8 +36,8 @@ import br.com.theoldpinkeye.api2discord.data.Embed;
 import br.com.theoldpinkeye.api2discord.remote.ApiFetch;
 import br.com.theoldpinkeye.api2discord.remote.DataPost;
 import br.com.theoldpinkeye.api2discord.remote.NetworkClient;
-import okhttp3.MediaType;
-import okhttp3.RequestBody;
+import br.com.theoldpinkeye.api2discord.remote.NetworkClientPost;
+import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -49,7 +50,7 @@ public class MainActivity extends AppCompatActivity {
     public List<Datum> dados = new ArrayList<>();
     public List<DropInfo> treatedData = new ArrayList<>();
     public String fetchUrl = "http://api.schtserv.com";
-    public String postUrl = "https://discordapp.com/api/webhooks";
+    public String postUrl = "https://discordapp.com/";
     public List<DropJson> dropJsonList = new ArrayList<>();
 
 
@@ -151,40 +152,58 @@ public class MainActivity extends AppCompatActivity {
         return new DropInfo(date, username, guildcard, hex, item);
     }
 
-    private void postDataToDiscord(List<DropJson> dropJsonL) {
+    private void postDataToDiscord(final List<DropJson> dropJsonL) {
 
 
-        for (DropJson drop : dropJsonL) {
 
 
-            String dropJS = new Gson().toJson(drop);
-            RequestBody requestBody = RequestBody.create(MediaType.parse("application/json"), dropJS);
-            Log.i("dado a enviar", dropJS);
+            final Handler mainHandler = new Handler(Looper.getMainLooper());
 
-            Retrofit retrofitpost = NetworkClient.getRetrofitClient(postUrl);
-
-            DataPost dataPostAPIs = retrofitpost.create(DataPost.class);
-            //TODO: Finalizar processo de envio (call e POST)
-
-            Call<RequestBody> call = dataPostAPIs.postDropInfo(requestBody);
-            Log.i("Call",call.toString());
-
-
-            call.enqueue(new Callback<RequestBody>() {
+            final Runnable myRunnable = new Runnable() {
                 @Override
-                public void onResponse(Call<RequestBody> call, Response<RequestBody> response) {
-                    if (response.isSuccessful()){
-                        Log.i("Foi",response.toString());
+                public void run() {// This is your code
+                    for (DropJson drop : dropJsonL) {
+
+
+                        Retrofit retrofitpost = NetworkClientPost.getRetrofitClient(postUrl);
+
+                        DataPost dataPostAPIs = retrofitpost.create(DataPost.class);
+                        //TODO: Finalizar processo de envio (call e POST)
+
+                        Call<ResponseBody> call = dataPostAPIs.postDropInfo(drop);
+                        //Log.i("Call",call.toString());
+
+
+                        call.enqueue(new Callback<ResponseBody>() {
+                            @Override
+                            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                                Log.i("Foi", response.toString());
+
+                                if (response.isSuccessful()) {
+                                    Log.i("Foi", response.toString());
+                                }
+                            }
+
+                            @Override
+                            public void onFailure(Call<ResponseBody> call, Throwable t) {
+                                Log.e("Erro", t.toString());
+                            }
+                        });
+
+                        try {
+                            Thread.sleep(1500);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+
                     }
+
                 }
 
-                @Override
-                public void onFailure(Call<RequestBody> call, Throwable t) {
-                    Log.e("Erro",t.toString());
-                }
-            });
+            };
 
-        }
+            mainHandler.post(myRunnable);
+
 
     }
 
