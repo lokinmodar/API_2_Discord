@@ -21,7 +21,7 @@ android {
 
 dependencies {
 
-    implementation 'com.jakewharton:butterknife:10.2.0'
+    implementation 'com.jakewharton:butterknife:10.2.3'
     annotationProcessor 'com.jakewharton:butterknife-compiler:10.2.0'
 
     implementation 'org.apache.commons:commons-lang3:3.0'
